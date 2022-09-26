@@ -1,6 +1,7 @@
 #nullable enable
 using LBPUnion.ProjectLighthouse.Extensions;
 using LBPUnion.ProjectLighthouse.Helpers;
+using LBPUnion.ProjectLighthouse.Helpers.FilterHelper;
 using LBPUnion.ProjectLighthouse.Levels;
 using LBPUnion.ProjectLighthouse.PlayerData;
 using LBPUnion.ProjectLighthouse.PlayerData.Profiles;
@@ -44,7 +45,7 @@ public class ListController : ControllerBase
 
         GameVersion gameVersion = token.GameVersion;
 
-        IEnumerable<Slot> queuedLevels = FilterHelper.filterListByRequest(this.database, gameFilterType, dateFilterType, token.GameVersion, username, FilterHelper.ListFilterType.Queue)
+        IEnumerable<Slot> queuedLevels = FilterHelper.filterLevelsByEndpoint(this.database, gameFilterType, dateFilterType, null, token.GameVersion, username, FilterableEndpoint.Queue)
             .Skip(Math.Max(0, pageStart - 1))
             .Take(Math.Min(pageSize, 30))
             .AsEnumerable();
@@ -128,7 +129,7 @@ public class ListController : ControllerBase
         User? targetUser = await this.database.Users.FirstOrDefaultAsync(u => u.Username == username);
         if (targetUser == null) return this.StatusCode(403, "");
 
-        IEnumerable<Slot> heartedLevels = FilterHelper.filterListByRequest(this.database, gameFilterType, dateFilterType, token.GameVersion, username, FilterHelper.ListFilterType.FavouriteSlots)
+        IEnumerable<Slot> heartedLevels = FilterHelper.filterLevelsByEndpoint(this.database, gameFilterType, dateFilterType, null, token.GameVersion, username, FilterableEndpoint.FavouriteSlots)
             .Skip(Math.Max(0, pageStart - 1))
             .Take(Math.Min(pageSize, 30))
             .AsEnumerable();

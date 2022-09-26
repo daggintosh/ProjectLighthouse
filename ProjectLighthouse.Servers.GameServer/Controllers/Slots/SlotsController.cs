@@ -2,6 +2,7 @@
 using LBPUnion.ProjectLighthouse.Configuration;
 using LBPUnion.ProjectLighthouse.Extensions;
 using LBPUnion.ProjectLighthouse.Helpers;
+using LBPUnion.ProjectLighthouse.Helpers.FilterHelper;
 using LBPUnion.ProjectLighthouse.Levels;
 using LBPUnion.ProjectLighthouse.Match.Rooms;
 using LBPUnion.ProjectLighthouse.PlayerData;
@@ -156,17 +157,26 @@ public class SlotsController : ControllerBase
         [FromQuery] int pageSize,
         [FromQuery] string? gameFilterType = null,
         [FromQuery] int? players = null,
+        [FromQuery] string? textFilter = null,
         [FromQuery] bool? move = null,
         [FromQuery] int? page = null
     )
     {
         if (page != null) pageStart = (int)page * 30;
         // bit of a better placeholder until we can track average user interaction with /stream endpoint
-        return await this.ThumbsSlots(pageStart, Math.Min(pageSize, 30), gameFilterType, players, move, "thisWeek");
+        return await this.ThumbsSlots(pageStart, Math.Min(pageSize, 30), gameFilterType, players, textFilter, move, "thisWeek");
     }
 
     [HttpGet("slots")]
-    public async Task<IActionResult> NewestSlots([FromQuery] int pageStart, [FromQuery] int pageSize)
+    public async Task<IActionResult> NewestSlots
+    (
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string? gameFilterType = null,
+        [FromQuery] string? textFilter = null,
+        [FromQuery] string? dateFilterType = null,
+        [FromQuery] bool? move = null
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -175,7 +185,7 @@ public class SlotsController : ControllerBase
 
         GameVersion gameVersion = token.GameVersion;
 
-        IQueryable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true)
+        IQueryable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .OrderByDescending(s => s.FirstUploaded)
             .Skip(Math.Max(0, pageStart - 1))
             .Take(Math.Min(pageSize, 30));
@@ -187,7 +197,17 @@ public class SlotsController : ControllerBase
     }
 
     [HttpGet("slots/like/{slotType}/{slotId:int}")]
-    public async Task<IActionResult> SimilarSlots([FromRoute] string slotType, [FromRoute] int slotId, [FromQuery] int pageStart, [FromQuery] int pageSize)
+    public async Task<IActionResult> SimilarSlots
+    (
+        [FromRoute] string slotType,
+        [FromRoute] int slotId,
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string? gameFilterType = null,
+        [FromQuery] string? textFilter = null,
+        [FromQuery] string? dateFilterType = null,
+        [FromQuery] bool? move = null
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -209,7 +229,7 @@ public class SlotsController : ControllerBase
             .Select(r => r.SlotId)
             .ToList();
 
-        IQueryable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true)
+        IQueryable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .Where(s => slotIdsWithTag.Contains(s.SlotId))
             .OrderByDescending(s => s.PlaysLBP1)
             .Skip(Math.Max(0, pageStart - 1))
@@ -223,7 +243,15 @@ public class SlotsController : ControllerBase
     }
 
     [HttpGet("slots/highestRated")]
-    public async Task<IActionResult> HighestRatedSlots([FromQuery] int pageStart, [FromQuery] int pageSize)
+    public async Task<IActionResult> HighestRatedSlots
+    (
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string? gameFilterType = null,
+        [FromQuery] string? textFilter = null,
+        [FromQuery] string? dateFilterType = null,
+        [FromQuery] bool? move = null
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -232,7 +260,7 @@ public class SlotsController : ControllerBase
 
         GameVersion gameVersion = token.GameVersion;
 
-        IEnumerable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true)
+        IEnumerable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .AsEnumerable()
             .OrderByDescending(s => s.RatingLBP1)
             .Skip(Math.Max(0, pageStart - 1))
@@ -246,7 +274,16 @@ public class SlotsController : ControllerBase
     }
 
     [HttpGet("slots/tag")]
-    public async Task<IActionResult> SimilarSlots([FromQuery] string tag, [FromQuery] int pageStart, [FromQuery] int pageSize)
+    public async Task<IActionResult> SimilarSlots
+    (
+        [FromQuery] string tag,
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string? gameFilterType = null,
+        [FromQuery] string? textFilter = null,
+        [FromQuery] string? dateFilterType = null,
+        [FromQuery] bool? move = null
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -260,7 +297,7 @@ public class SlotsController : ControllerBase
             .Select(s => s.SlotId)
             .ToListAsync();
 
-        IQueryable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true)
+        IQueryable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .Where(s => slotIdsWithTag.Contains(s.SlotId))
             .OrderByDescending(s => s.PlaysLBP1)
             .Skip(Math.Max(0, pageStart - 1))
@@ -274,7 +311,15 @@ public class SlotsController : ControllerBase
     }
 
     [HttpGet("slots/mmpicks")]
-    public async Task<IActionResult> TeamPickedSlots([FromQuery] int pageStart, [FromQuery] int pageSize)
+    public async Task<IActionResult> TeamPickedSlots
+    (
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string? gameFilterType = null,
+        [FromQuery] string? textFilter = null,
+        [FromQuery] string? dateFilterType = null,
+        [FromQuery] bool? move = null
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -283,7 +328,7 @@ public class SlotsController : ControllerBase
 
         GameVersion gameVersion = token.GameVersion;
 
-        IQueryable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true)
+        IQueryable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .Where(s => s.TeamPick)
             .OrderByDescending(s => s.LastUpdated)
             .Skip(Math.Max(0, pageStart - 1))
@@ -296,7 +341,13 @@ public class SlotsController : ControllerBase
     }
 
     [HttpGet("slots/lbp2luckydip")]
-    public async Task<IActionResult> LuckyDipSlots([FromQuery] int pageStart, [FromQuery] int pageSize, [FromQuery] int seed)
+    public async Task<IActionResult> LuckyDipSlots(
+        [FromQuery] int pageStart,
+        [FromQuery] int pageSize,
+        [FromQuery] string gameFilterType,
+        [FromQuery] string? textFilter,
+        [FromQuery] int seed
+    )
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403, "");
@@ -305,7 +356,9 @@ public class SlotsController : ControllerBase
 
         GameVersion gameVersion = token.GameVersion;
 
-        IEnumerable<Slot> slots = this.database.Slots.ByGameVersion(gameVersion, false, true).OrderBy(_ => EF.Functions.Random()).Take(Math.Min(pageSize, 30));
+        IEnumerable<Slot> slots = FilterHelper.filterLevelsByEndpoint(this.database, gameFilterType, null, textFilter, gameVersion, null, FilterableEndpoint.Generic)
+        .OrderBy(_ => EF.Functions.Random())
+        .Take(Math.Min(pageSize, 30));
 
         string response = slots.Aggregate(string.Empty, (current, slot) => current + slot.Serialize(gameVersion));
         int start = pageStart + Math.Min(pageSize, ServerConfiguration.Instance.UserGeneratedContentLimits.EntitledSlots);
@@ -321,6 +374,7 @@ public class SlotsController : ControllerBase
         [FromQuery] int pageSize,
         [FromQuery] string? gameFilterType = null,
         [FromQuery] int? players = null,
+        [FromQuery] string? textFilter = null,
         [FromQuery] bool? move = null,
         [FromQuery] string? dateFilterType = null
     )
@@ -332,7 +386,7 @@ public class SlotsController : ControllerBase
 
         Random rand = new();
 
-        IEnumerable<Slot> slots = this.filterByRequest(gameFilterType, dateFilterType, token.GameVersion)
+        IEnumerable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .AsEnumerable()
             .OrderByDescending(s => s.Thumbsup)
             .ThenBy(_ => rand.Next())
@@ -353,6 +407,7 @@ public class SlotsController : ControllerBase
         [FromQuery] int pageSize,
         [FromQuery] string? gameFilterType = null,
         [FromQuery] int? players = null,
+        [FromQuery] string? textFilter = null,
         [FromQuery] bool? move = null,
         [FromQuery] string? dateFilterType = null
     )
@@ -364,14 +419,14 @@ public class SlotsController : ControllerBase
 
         Random rand = new();
 
-        IEnumerable<Slot> slots = this.filterByRequest(gameFilterType, dateFilterType, token.GameVersion)
+        IEnumerable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .AsEnumerable()
             .OrderByDescending
             (
-                // probably not the best way to do this?
+                // (still) probably not the best way to do this?
                 s =>
                 {
-                    return this.getGameFilter(gameFilterType, token.GameVersion) switch
+                    return FilterHelper.getGameFilter(gameFilterType, token.GameVersion) switch
                     {
                         GameVersion.LittleBigPlanet1 => s.PlaysLBP1Unique,
                         GameVersion.LittleBigPlanet2 => s.PlaysLBP2Unique,
@@ -399,6 +454,7 @@ public class SlotsController : ControllerBase
         [FromQuery] int pageSize,
         [FromQuery] string? gameFilterType = null,
         [FromQuery] int? players = null,
+        [FromQuery] string? textFilter = null,
         [FromQuery] bool? move = null,
         [FromQuery] string? dateFilterType = null
     )
@@ -410,7 +466,7 @@ public class SlotsController : ControllerBase
 
         Random rand = new();
 
-        IEnumerable<Slot> slots = this.filterByRequest(gameFilterType, dateFilterType, token.GameVersion)
+        IEnumerable<Slot> slots = FilterHelper.filterLevelsByEndpoint(database, gameFilterType, dateFilterType, textFilter, token.GameVersion, null, FilterableEndpoint.Generic)
             .AsEnumerable()
             .OrderByDescending(s => s.Hearts)
             .ThenBy(_ => rand.Next())
@@ -432,6 +488,7 @@ public class SlotsController : ControllerBase
         [FromQuery] int pageSize,
         [FromQuery] string? gameFilterType = null,
         [FromQuery] int? players = null,
+        [FromQuery] string? textFilter = null,
         [FromQuery] bool? move = null
     )
     {
@@ -478,54 +535,5 @@ public class SlotsController : ControllerBase
         int total = playersBySlotId.Count;
 
         return this.Ok(generateSlotsResponse(response, start, total));
-    }
-
-
-    private GameVersion getGameFilter(string? gameFilterType, GameVersion version)
-    {
-        if (version == GameVersion.LittleBigPlanetVita) return GameVersion.LittleBigPlanetVita;
-        if (version == GameVersion.LittleBigPlanetPSP) return GameVersion.LittleBigPlanetPSP;
-
-        return gameFilterType switch
-        {
-            "lbp1" => GameVersion.LittleBigPlanet1,
-            "lbp2" => GameVersion.LittleBigPlanet2,
-            "lbp3" => GameVersion.LittleBigPlanet3,
-            "both" => GameVersion.LittleBigPlanet2, // LBP2 default option
-            null => GameVersion.LittleBigPlanet1,
-            _ => GameVersion.Unknown,
-        };
-    }
-
-    private IQueryable<Slot> filterByRequest(string? gameFilterType, string? dateFilterType, GameVersion version)
-    {
-        if (version == GameVersion.LittleBigPlanetVita || version == GameVersion.LittleBigPlanetPSP || version == GameVersion.Unknown)
-        {
-            return this.database.Slots.ByGameVersion(version, false, true);
-        }
-
-        string _dateFilterType = dateFilterType ?? "";
-
-        long oldestTime = _dateFilterType switch
-        {
-            "thisWeek" => DateTimeOffset.Now.AddDays(-7).ToUnixTimeMilliseconds(),
-            "thisMonth" => DateTimeOffset.Now.AddDays(-31).ToUnixTimeMilliseconds(),
-            _ => 0,
-        };
-
-        GameVersion gameVersion = this.getGameFilter(gameFilterType, version);
-
-        IQueryable<Slot> whereSlots;
-
-        // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-        if (gameFilterType == "both")
-            // Get game versions less than the current version
-            // Needs support for LBP3 ("both" = LBP1+2)
-            whereSlots = this.database.Slots.Where(s => s.Type == SlotType.User && !s.Hidden && s.GameVersion <= gameVersion && s.FirstUploaded >= oldestTime);
-        else
-            // Get game versions exactly equal to gamefiltertype
-            whereSlots = this.database.Slots.Where(s => s.Type == SlotType.User && !s.Hidden && s.GameVersion == gameVersion && s.FirstUploaded >= oldestTime);
-
-        return whereSlots.Include(s => s.Creator).Include(s => s.Location);
     }
 }
