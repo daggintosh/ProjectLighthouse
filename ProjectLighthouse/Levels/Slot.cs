@@ -130,6 +130,9 @@ public class Slot
             return occurrences.OrderBy(r => r.Value).Select(r => r.Key).ToArray();
         }
     }
+    [NotMapped]
+    [XmlArray("customRewards")]
+    public string _ {get; set;}
 
     [XmlElement("background")]
     [JsonIgnore]
