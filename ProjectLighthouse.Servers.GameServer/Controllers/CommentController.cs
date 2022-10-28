@@ -30,10 +30,10 @@ public class CommentController : ControllerBase
         if (token == null) return this.StatusCode(403);
         if (username != null) {
             User? userTarget = await this.database.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (userTarget == null || !userTarget.CommentsEnabled) return this.StatusCode(403);
+            if (userTarget?.CommentsEnabled ?? false) return this.StatusCode(403);
         } else if (slotId != null) {
             Slot? slotTarget = await this.database.Slots.FirstOrDefaultAsync(s => s.SlotId == slotId);
-            if (slotTarget == null || !slotTarget.CommentsEnabled) return this.StatusCode(403);
+            if (slotTarget?.CommentsEnabled ?? false) return this.StatusCode(403);
         } else {
             return this.StatusCode(404);
         }
