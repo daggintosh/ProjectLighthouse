@@ -28,15 +28,18 @@ public class CommentController : ControllerBase
     {
         GameToken? token = await this.database.GameTokenFromRequest(this.Request);
         if (token == null) return this.StatusCode(403);
-        if (username == null && slotId == null) return this.BadRequest();
-        User? userTarget = await this.database.Users.FirstOrDefaultAsync(u => u.Username == username);
-        Slot? slotTarget = await this.database.Slots.FirstOrDefaultAsync(s => s.SlotId == slotId);
-        if (userTarget == null && slotTarget == null) return this.StatusCode(404);
-
+        if (username != null) {
+            User? userTarget = await this.database.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (userTarget == null || !userTarget.CommentsEnabled) return this.StatusCode(403);
+        } else if (slotId != null) {
+            Slot? slotTarget = await this.database.Slots.FirstOrDefaultAsync(s => s.SlotId == slotId);
+            if (slotTarget == null || !slotTarget.CommentsEnabled) return this.StatusCode(403);
+        } else {
+            return this.StatusCode(404);
+        }
         Comment? comment = await this.database.Comments.Include(c => c.Poster)
                                 .FirstOrDefaultAsync(c => c.CommentId == commentId);
         if (comment == null) return this.StatusCode(404);
-
         return this.Ok(comment.Serialize());
     }
 
