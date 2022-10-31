@@ -117,6 +117,7 @@ public class ActivityController : ControllerBase
 
         string groups = "";
         string slots = "";
+        string playlists = "";
         string users = "";
         string news = "";
 
@@ -189,6 +190,17 @@ public class ActivityController : ControllerBase
                     users += targetedUser?.Serialize(gameVersion);
                     groupType = "user";
                     groupData += LbpSerializer.StringElement("user_id", targetedUser?.Username);
+                    break;
+                case ActivityCategory.Playlist:
+                    Playlist? targetedPlaylist = await this.database.Playlists.Include(p => p.Creator).FirstOrDefaultAsync(p => p.PlaylistId == stream.TargetId);
+                    if (targetedPlaylist == null || (!excludeMyPlaylists && targetedPlaylist.CreatorId == requestee.UserId)) break;
+                    if (targetedPlaylist.Creator == null)
+                    {
+                        int p = 1;
+                    }
+                    users += targetedPlaylist.Serialize();
+                    groupType = "playlist";
+                    groupData += LbpSerializer.StringElement("playlist_id", targetedPlaylist?.PlaylistId);
                     break;
             }
             if (invalid) continue; // Skip the iteration if the slot is invalid by filter or other reasons
@@ -273,9 +285,10 @@ public class ActivityController : ControllerBase
                 LbpSerializer.StringElement("start_timestamp", timestamp) +
                 LbpSerializer.StringElement("end_timestamp", endTimestamp) +
                 LbpSerializer.StringElement("groups", groups) +
-                ((slots != "") ? LbpSerializer.StringElement("slots", slots) : "") +
-                ((users != "") ? LbpSerializer.StringElement("users", users) : "") +
-                ((news != "") ? LbpSerializer.StringElement("news", news) : "")
+                ((!string.IsNullOrWhiteSpace(slots)) ? LbpSerializer.StringElement("slots", slots) : "") +
+                ((!string.IsNullOrWhiteSpace(playlists)) ? LbpSerializer.StringElement("playlists", playlists) : "") +
+                ((!string.IsNullOrWhiteSpace(users)) ? LbpSerializer.StringElement("users", users) : "") +
+                ((!string.IsNullOrWhiteSpace(news)) ? LbpSerializer.StringElement("news", news) : "")
             )
         );
     }

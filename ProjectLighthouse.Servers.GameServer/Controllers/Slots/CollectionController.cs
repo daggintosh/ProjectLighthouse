@@ -63,6 +63,10 @@ public class CollectionController : ControllerBase
         {
             targetPlaylist.SlotIds = targetPlaylist.SlotIds.Where(s => s != slotId).ToArray();
             await this.database.SaveChangesAsync();
+
+            ActivitySubject? subject = await this.database.ActivitySubject.FirstOrDefaultAsync(a => a.ActionType == (int)ActivityCategory.Playlist && a.ActorId == targetPlaylist.CreatorId && a.ObjectId == targetPlaylist.PlaylistId);
+            if (subject != null) await this.database.DeleteActivitySubject(subject);
+
             return this.Ok(this.GetUserPlaylists(token.UserId));
         }
 
@@ -85,6 +89,7 @@ public class CollectionController : ControllerBase
                 foreach (int id in newPlaylist.LevelIds)
                 {
                     targetPlaylist.SlotIds = targetPlaylist.SlotIds.Append(id).ToArray();
+                    await this.database.CreateActivitySubject(ActivityCategory.Playlist, targetPlaylist.CreatorId, targetPlaylist.PlaylistId, EventType.AddLevelToPlaylist);
                 }
             }
         }
@@ -132,6 +137,7 @@ public class CollectionController : ControllerBase
         this.database.Playlists.Add(playlist);
 
         await this.database.SaveChangesAsync();
+        await this.database.CreateActivitySubject(ActivityCategory.Playlist, playlist.CreatorId, playlist.PlaylistId, EventType.CreatePlaylist);
 
         return this.Ok(this.GetUserPlaylists(token.UserId));
     }

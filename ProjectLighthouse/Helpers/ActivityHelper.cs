@@ -18,7 +18,9 @@ public enum EventType
     HeartLevel,
     HeartUser,
     PlayLevel,
-    PublishPlaylist
+    CreatePlaylist,
+    HeartPlaylist,
+    AddLevelToPlaylist
 }
 
 public enum ActivityCategory
@@ -27,12 +29,15 @@ public enum ActivityCategory
     TeamPick = 1,
     Level = 2,
     User = 3,
+    // Uncombinable, but LBP 2,Vita will combine them on their own
+    Comment = 4,
     // UNCOMBINABLES!
     // The following can not be combined with any other event, 
     // and in rare cases, themselves.
-    Comment = 4,
     HeartUser = 5,
     UserComment = 6,
+
+    Playlist = 7
 }
 
 public static class ActivityHelper
@@ -56,7 +61,9 @@ public static class ActivityHelper
             case EventType.CommentUser:
             case EventType.HeartUser:
                 return "object_user";
-            case EventType.PublishPlaylist:
+            case EventType.CreatePlaylist:
+            case EventType.HeartPlaylist:
+            case EventType.AddLevelToPlaylist:
                 return "object_playlist_id";
         }
     }
@@ -91,6 +98,12 @@ public static class ActivityHelper
                 return "heart_user";
             case EventType.PlayLevel:
                 return "play_level";
+            case EventType.CreatePlaylist:
+                return "create_playlist";
+            case EventType.HeartPlaylist:
+                return "heart_playlist";
+            case EventType.AddLevelToPlaylist:
+                return "add_level_to_playlist";
             default: return "invalid_event";
         }
     }

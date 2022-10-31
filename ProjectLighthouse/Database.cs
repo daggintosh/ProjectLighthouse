@@ -260,6 +260,7 @@ public class Database : DbContext
         });
 
         await this.SaveChangesAsync();
+        await this.CreateActivitySubject(ActivityCategory.Playlist, userId, heartedPlaylist.PlaylistId, EventType.HeartPlaylist);
     }
 
     public async Task UnheartPlaylist(int userId, Playlist heartedPlaylist)
@@ -268,6 +269,8 @@ public class Database : DbContext
         if (heartedList != null) this.HeartedPlaylists.Remove(heartedList);
 
         await this.SaveChangesAsync();
+        ActivitySubject? subject = await this.ActivitySubject.FirstOrDefaultAsync(a => a.ActionType == (int)ActivityCategory.Playlist && a.ActorId == userId && a.ObjectId == heartedPlaylist.PlaylistId);
+        if (subject != null) await this.DeleteActivitySubject(subject);
     }
 
     public async Task HeartLevel(int userId, Slot heartedSlot)
